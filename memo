@@ -1,0 +1,346 @@
+xyzzyでバイナリデータを扱いたい。
+
+
+1バイトデータの読み書き例 : b00
+--------------------------------------------------------------------------------
+・ファイルをオープンしバイナリデータを書き込む
+
+user> (setq f (open "b00" :direction :output :if-does-not-exist :create :encoding :binary))
+#<file-output stream: F:/makoto/dev/lisp/binOp/b00>
+user> (write-char (code-char #x01) f)
+#\C-a
+user> (close f)
+
+・ファイルをオープンしバイナリデータを読み込む
+
+user> (setq f (open "b00" :direction :input :if-does-not-exits :error :encoding :binary))
+#<file-input stream: F:/makoto/dev/lisp/binOp/b00>
+user> (format t "~X" (char-code (read-char f)))
+1
+nil
+user> (close f)
+t
+
+2バイトデータの読み書き例 : b01
+--------------------------------------------------------------------------------
+user> (setq f (open "b01" :direction :output :if-does-not-exist :create :encoding :binary))
+#<file-output stream: F:/makoto/dev/lisp/binOp/b01>
+user> (write-char (code-char #x01) f)
+#\C-a
+user> (write-char (code-char #x02) f)
+#\C-b
+user> (close f)
+t
+
+user> (setq f (open "b01" :direction :input :if-does-not-exits :error :encoding :binary))
+#<file-input stream: F:/makoto/dev/lisp/binOp/b01>
+user> (format t "~X" (char-code (read-char f nil)))
+1
+nil
+user> (format t "~X" (char-code (read-char f nil)))
+2
+nil
+user> (format t "~X" (char-code (read-char f nil)))
+不正なデータ型です: nil: character
+
+-> reac-char の eof-error-pの使い方がわからない。
+   xyzzy配下のread-char の使用例を見ると (read-char ストリーム nil nil)という記述が見られる。
+   おそらく、character型のストリームであれば、「不正なデータ型」という扱いにはならないのかもしれない。
+
+user> (setq f (open "b01" :direction :input :if-does-not-exits :error :encoding :text))
+#<file-input stream: F:/makoto/dev/lisp/binOp/b01>
+user> (format t "~X" (char-code (read-char f nil nil)))
+1
+nil
+user> (format t "~X" (char-code (read-char f nil nil)))
+2
+nil
+user> (format t "~X" (char-code (read-char f nil nil)))
+不正なデータ型です: nil: character
+
+-> openの指定でcharacter型は指定できなかったので、textを指定してみたが、結果は同じであった。
+   バイナリデータを扱う場合は別の方法が必要なのかも。
+
+-> 試しているコードが悪い。char-code または、formatの部分で異常が出ていた。
+
+user> (setq f (open "b01" :direction :input :if-does-not-exits :error :encoding :text))
+#<file-input stream: F:/makoto/dev/lisp/binOp/b01>
+user> (read-char f nil :eof)
+#\C-a
+user> (read-char f nil :eof)
+#\C-b
+user> (read-char f nil :eof)
+:eof
+
+-> 指定した値が返ってきた。referenceでは文字列ということであったが、シンボルも返せるようだ。
+   (何かのコードで見たから、実際に試したのだが。)
+
+バイナリ型で開いたストリームにひらがなを書き込んだらどうなるのだろうか : b02
+--------------------------------------------------------------------------------
+user> (setq f (open "b02" :direction :output :if-does-not-exist :create :encoding :binary))
+#<file-output stream: F:/makoto/dev/lisp/binOp/b02>
+user> (write-char #\あ f)
+#\あ
+user> (close f)
+t
+
+-> 2バイトのファイルができた。
+
+user> (setq f (open "b02" :direction :input :if-does-not-exits :error :encoding :binary))
+#<file-input stream: F:/makoto/dev/lisp/binOp/b02>
+user> (read-char f nil :eof)
+#\x82 ; 0d130
+user> (read-char f nil :eof)
+#\ ; 0d160
+user> (read-char f nil :eof)
+:eof
+
+user> (setq f (open "b02" :direction :input :if-does-not-exits :error :encoding :text))
+#<file-input stream: F:/makoto/dev/lisp/binOp/b02>
+user> (read-char f nil :eof)
+#\あ
+user> (read-char f nil :eof)
+:eof
+
+-> binaryで開いた場合は、1バイトずつ読み込んでいるようである。textで開いた場合は2バイト文字を1文字として
+   読み込んでいる。binaryの場合は、1バイト1文字という挙動をしているようだ。
+
+バイナリモード開いたストリームに2バイト文字のデータを入力し、textモードreadするとどうなるか
+--------------------------------------------------------------------------------
+user> (setq f (open "b03" :direction :output :if-does-not-exist :create :encoding :binary))
+#<file-output stream: F:/makoto/dev/lisp/binOp/b03>
+user> (write-char (code-char 130) f)
+#\x82
+user> (write-char (code-char 160) f)
+#\
+user> (close f)
+t
+
+user> (setq f (open "b03" :direction :input :if-does-not-exits :error :encoding :text))
+#<file-input stream: F:/makoto/dev/lisp/binOp/b03>
+user> (read-char f nil :eof)
+#\あ
+user> (read-char f nil :eof)
+:eof
+
+-> 2バイト文字が読み取れる。
+
+#\あ(sjis)がbinaryで2バイトであることはどのようにして得られるか
+--------------------------------------------------------------------------------
+user> (si:octet-length "あ")
+2
+user> (si:octet-length "A")
+1
+
+-> 文字に対するoctet-lengthのようなものが探せない。
+   si:octet-lengthとconvert-encoding-from-internalを組み合わせて使用するのかな。
+
+
+整数のバイトサイズを指定してデータを書き込むにはどうすれば良いか。
+--------------------------------------------------------------------------------
+
+user> (integerp #xff)
+t
+
+user> (type-of #xff)
+integer
+user> (type-of #xffffffffffffffffffffffff)
+integer
+
+integer-length
+
+user> (integer-length #xff)
+7
+user> (integer-length #xffff)
+15
+
+
+define-c-struct
+(declare (type (integer xxxx))
+
+chunk ; referenceに情報あり, C言語のような構造体を使用する場合はこのイメージなのかも。
+pack-int16
+
+-> これは今の自分にはレベルが高い。本格的にC互換のメモリ構造を扱うようになってから考えることにする。
+-> 上手そうな形は今の自分では探せなかった。力技的なコードになりそう。
+
+
+user> (with-open-file (s "b02" :direction :input :encoding :binary)
+		(let ((c nil))
+		  (loop
+			(setq c (read-char s nil :eof))
+			(if (eq :eof c)
+				(return)
+			  (format t "~2,'0X~%" (char-code c))))))
+82 a0 
+
+user> (with-open-file (s "b02" :direction :input :encoding :binary)
+		(let ((c nil) (result nil))
+		  (loop
+			(setq c (read-char s nil :eof))
+			(if (eq :eof c)
+				(return (nreverse result))
+			  (push (char-code c) result)))))
+(130 160)
+
+user> (with-open-file (s "b02" :direction :input :encoding :binary)
+		(let ((c nil) (result (make-array 16 :element-type 'character :fill-pointer 0)))
+		  (loop
+			(setq c (read-char s nil :eof))
+			(if (eq :eof c)
+				(return (map 'vector #'char-code (nreverse result)))
+			  (push c result)))))
+
+#(130 160)
+
+user> (with-open-file (s "b03" :direction :input :encoding :binary)
+		(let ((result (make-array (file-length s) :element-type 'character :fill-pointer 0)))
+		  (read-into result s)
+		  (map 'vector #'char-code result)))
+
+
+user> (require "xl-alexandria")
+t
+user> (alexandria:read-file-into-byte-vector "b02")
+#(130 160)
+
+(defun read-into-byte-vector (stream n)
+		(let ((result (make-array n :element-type 'character :fill-pointer 0)))
+		  (read-into result stream nil n)
+		  (map 'vector #'char-code result)))
+
+バイナリファイル
+--------------------------------------------------------------------------------
+構造を持ったバイナリファイルを作成して練習してみる。
+欲しい情報
+
+日付文字列, yyyymmdd, 8
+時刻文字列, hhmmddsss, 9
+後続データサイズ, 10桁整数の文字列, 10
+後続データ, 後続データサイズで指定した長さのデータ(0～9999999999)
+
+1.まずはとにかくデータを作成し、ファイルに保存してみる
+------------------------------------------------------
+日付文字列, 20220717
+時刻文字列, 084122398
+後続データサイズ, 0000000016
+後続データ, 0123456789ABCDEF
+
+user> (+ 8 9 10 16)
+43
+user> (setq v (make-vector (+ 8 9 10 16) :element-type '(unsigned-byte 8) :initial-element #x00 :fill-pointer 0))
+#()
+user> (map 'vector #'char-code "20220717")
+#(50 48 50 50 48 55 49 55)
+user> (map-into v #'char-code "20220717")
+#(50 48 50 50 48 55 49 55)
+
+user> (map-into v #'char-code (concat "20220717" "084122398" "0000000016" "0123456789ABCDEF"))
+#(50 48 50 50 48 55 49 55 48 56 52 49 50 50 51 57 56 48 48 48 48 48 48 48 48 49 54 48 49 50 51 52 53 54 55 56 57 65 66 67 68 69 70)
+
+user> (with-open-file (s "b05" :direction :output :if-does-not-exist :create :encoding :binary)
+		(dolist (d (coerce v 'list))
+		  (write-char (code-char d) s)))
+nil
+
+-> この例の場合だったら、文字列を char-code する必要はなかったな。
+   次は、#x00 - #xff までの 256バイトデータを書き込んでみよう。
+   適当に書き込むだけの場合は、vectorは用意しなくてもいいのだよね。
+
+user> (format-date *standard-output* "%Y%m%d")
+20220717
+
+user> (format-date *standard-output* "%H%M%S000")
+092337000
+nil
+
+-> ミリ秒を指定したいが、今やりたい事の本筋ではないので後回しにする。
+
+user> (dotimes (i #xff)
+		(write-char (code-char i)))
+:
+
+user> (with-open-file (s "b06" :direction :output :if-does-not-exist :create :encoding :binary)
+		(format-date s "%Y%m%d")
+		(format-date s "%H%M%S000")
+		(format s "~10,'0D" #xff)
+		(dotimes (d #xff)
+		  (write-char (code-char d) s)))
+
+nil
+
+ファイル書き込みを簡易化したい。どのような関数を用意すれば良いか。
+
+(f サイズ データ 出力ストリーム)
+(f バイトリスト 出力ストリーム)    <- 
+(f バイトベクトル 出力ストリーム)  <- 
+
+user> (defun write-byte-list-log (bytes stream)
+		(format-date stream "%Y%m%d%H%M%S000")
+		(format stream "~10,'0D" (length bytes))
+		(dolist (b bytes)
+		  (write-char (code-char b) stream)))
+
+write-byte-list-log
+user> (with-open-file (s "b07" :direction :output :if-does-not-exist :create :encoding :binary)
+		(write-byte-list-log '(#x00) s))
+
+
+(defun write-byte-list-to-file (bytes filepath)
+  (with-open-file (s filepath :direction :output :if-doex-not-exist :create :encoding :binary)
+	(write-byte-list-log bytes s)))
+
+-> この関数がもう一歩進みそうな気がする。with-xxx的な感じで。
+
+☆バイナリデータのリストや配列を得る方法☆
+--------------------------------------------------------------------------------
+user> (convert-encoding-to-internal *encoding-binary* "あ")
+"\x82"
+user> (map 'vector #'char-code (convert-encoding-to-internal *encoding-binary* "あ"))
+#(130 160)
+user> (map 'list #'char-code (convert-encoding-to-internal *encoding-binary* "あ"))
+(130 160)
+
+☆☆最初に求めていた感じまで、もうちょい☆☆
+
+user> (setq s (make-string-input-stream (convert-encoding-to-internal *encoding-binary* "あいうえお")))
+#<string-input stream 185995560>
+user> (read-into v s nil :eof 2)
+"\x82"
+user> (read-into v s nil :eof 2)
+"\x82｢"
+user> (read-into v s nil :eof 2)
+"\x82､"
+user> (read-into v s nil :eof 2)
+"\x82ｦ"
+user> (read-into v s nil :eof 2)
+"\x82ｨ"
+user> (read-into v s nil :eof 2)
+:eof
+
+関数のシグネチャ
+--------------------------------------------------------------------------------
+make-string-input-stream STRING &optional START END
+read-into STRING &optional INPUT-STREAM EOF-ERROR-P EOF-VALUE MAX-LENGTH
+convert-encoding-to-internal ENCODING INPUT-STRING-OR-STREAM &optional OUTPUT-STREAM, 戻り値 文字列 or t
+make-string-output-stream 引数無し
+set-stream-encoding (stream encoding)
+*make-string-output-stream-from-string
+
+user> (setq sos (make-string-output-stream))
+#<string-output stream 147461812>
+user> (convert-encoding-to-internal *encoding-binary* *standard-input* sos)
+あ
+t
+user> (get-output-stream-string sos)
+"\x82"
+
+
+
+ファイル
+--------------------------------------------------------------------------------
+b00 : 1バイト #x01
+b02 : 2バイト #x82 #xa0 あ sjis
+b03 : 2バイト #x82 #xa0
+
+
