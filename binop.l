@@ -31,6 +31,14 @@
 	  (write-char (code-char (ldb (byte 8 0) x)))
 	  x)))
 
+(defun read-n-char (times &optional in eof-error-p eof-value)
+  (let ((result (make-vector times :element-type 'character :fill-pointer 0)))
+	(dotimes (i times result)
+	  (let ((c (read-char in eof-error-p eof-value)))
+		(if (eq eof-value c)
+			(return result)
+		  (vector-push c result))))))
+
 (defun %read-n-byte (max-length stream)
   (let ((result (make-vector max-length :element-type 'character :fill-pointer 0))
 		(binary-stream (make-string-input-stream
