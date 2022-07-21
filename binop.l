@@ -16,6 +16,10 @@
   `(with-open-binary-file (,stream ,filename :direction :output ,@options)
 	 ,@body))
 
+(defmacro with-input-from-binary-file ((stream filename &rest options) &body body)
+  `(with-open-binary-file (,stream, filename :direction :input ,@options)
+	 ,@body))
+
 (defun write-short-int (x &key (little t))
   (if little
 	  (progn
