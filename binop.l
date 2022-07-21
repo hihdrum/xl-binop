@@ -66,3 +66,8 @@
 			(setq counter 0))
 		(progn
 		  (princ #\SPC))))))
+
+(defun display-char (c &optional (sub-c #\.))
+  (if (graphic-char-p c)
+	  c
+	sub-c))
