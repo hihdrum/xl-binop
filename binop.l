@@ -47,9 +47,8 @@
 	  x)))
 
 (defun hex-string (str)
-  (let ((hstr (format nil "~{~2,'0x~^ ~}"
-					  (map 'list #'char-code (convert-encoding-to-internal *encoding-binary* str)))))
-	(string-right-trim " " hstr)))
+  (let ((bin-str (convert-encoding-to-internal *encoding-binary* str)))
+	(format nil "~{~2,'0x~^ ~}" (map 'list #'char-code bin-str))))
 
 (defun hex-dump (stream)
   (let ((bin-str (convert-encoding-to-internal *encoding-binary* stream)))
