@@ -76,7 +76,11 @@
 	(loop
 	  (setq c (read-char s nil :eof))
 	  (if (eq c :eof)
-		  (return))
+		  (progn
+			(unless (eq 0 counter)
+			  (format t "~8,'0X: ~{~2,'0X~^ ~} : ~A~%"
+					  (* line-counter 16) (map 'list #'char-code v) (map 'string #'display-char v)))
+			(return)))
 	  (incf counter)
 	  (vector-push c v)
 	  (if (= 16 counter)
@@ -92,3 +96,32 @@
   (if (graphic-char-p c)
 	  c
 	sub-c))
+
+(defun 4-binary-string-to-integer (bin-str)
+  (let ((v (map 'vector #'char-code bin-str)))
+	(+ (svref v 0)
+	   (ash (svref v 1) 8)
+	   (ash (svref v 2) 16)
+	   (ash (svref v 3) 24))))
+
+(defun section-header-block (&optional in)
+  (format t "Section Header Block~%")
+  (format t "Block Type : ~A~%" (hex-string (read-n-char 4 in)))
+  (format t "Block Txotal Length : ~A~%" (hex-string (read-n-char 4 in)))
+  (format t "Byte-Order-Magic : ~A~%" (hex-string (read-n-char 4 in)))
+  (format t "major version : ~A~%" (hex-string (read-n-char 2)))
+  (format t "minor version : ~A~%" (hex-string (read-n-char 2)))
+  (format t "Section Length : ~A~%" (hex-string (read-n-char 4 in)))
+  (format t "Block Total Length : ~A~%" (hex-string (read-n-char 4 in)))
+  )
+
+(defun little-endian-p (magic-str)
+  (string= (map 'string #'code-char #(#x4d #x3c #x2b #x1a)) magic-str))
+
+(defun read-section-header-block (&optional in)
+  (let (result)
+	(setq result (read-n-char 4 in))
+	(let ((size-str (read-n-char 4)))
+	  (setq result (concat result size-str))
+	  (setq result (concat result (read-n-char (- (4-binary-string-to-integer size-str) 8)))))
+	result))
