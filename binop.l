@@ -20,6 +20,10 @@
   `(with-open-binary-file (,stream, filename :direction :input ,@options)
 	 ,@body))
 
+(defun make-string-binary-input-stream (str)
+  (let ((bin-str (convert-encoding-to-internal *encoding-binary* str)))
+	(make-string-input-stream bin-str)))
+
 (defun write-short-int (x &key (little t))
   (if little
 	  (progn
