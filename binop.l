@@ -22,10 +22,6 @@
 			(return result)
 		  (vector-push c result))))))
 
-(defun read-n-byte-from-binary-stream (max-length &optional input-stream eof-error eof-value)
-  (let ((result (make-vector max-length :element-type 'character :fill-pointer 0)))
-	(read-into result input-stream eof-error eof-value max-length)))
-
 (defun write-byte-list-log (bytes &optional (stream *standard-output*))
   (format-date stream "%Y%m%d%H%M%S000")
   (format stream "~10,'0D" (length bytes))
