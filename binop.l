@@ -54,7 +54,7 @@
   (let ((bin-str (convert-encoding-to-internal *encoding-binary* stream)))
 	(hex-string bin-str)))
 
-(defun print-hex-dump (n stream)
+(defun %print-hex-dump (n stream)
   (let (c (counter 0))
 	(loop
 	  (setq c (read-char stream nil :eof))
@@ -68,6 +68,25 @@
 			(setq counter 0))
 		(progn
 		  (princ #\SPC))))))
+
+(defun print-hex-dump (str)
+  (let (c (counter 0) (v (make-vector 16 :element-type 'character :fill-pointer 0))
+		  (line-counter 0)
+		  (s (make-string-input-stream str)))
+	(loop
+	  (setq c (read-char s nil :eof))
+	  (if (eq c :eof)
+		  (return))
+	  (incf counter)
+	  (vector-push c v)
+	  (if (= 16 counter)
+		  (progn
+			(format t "~8,'0X: ~{~2,'0X~^ ~} : ~A~%"
+					(* line-counter 16) (map 'list #'char-code v) (map 'string #'display-char v))
+			(setq counter 0)
+			(incf line-counter)
+			(setq v (make-vector 16 :element-type 'character :fill-pointer 0)))))))
+
 
 (defun display-char (c &optional (sub-c #\.))
   (if (graphic-char-p c)
