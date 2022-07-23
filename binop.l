@@ -125,3 +125,17 @@
 	  (setq result (concat result size-str))
 	  (setq result (concat result (read-n-char (- (4-binary-string-to-integer size-str) 8)))))
 	result))
+
+(defun print-pcap-header (bin-str)
+  (format t "tcpdump magic : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 0 4)))
+  (format t "major version : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 4 6)))
+  (format t "major version : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 6 8)))
+  (format t "time zone : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 8 12)))
+  (format t "sigfigs : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 12 16)))
+  (format t "scaplen : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 16 20)))
+  (format t "link type : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 20 24))))
+
+(defun print-packet-header (bin-str)
+  (format t "Time Stamp : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 0 8)))
+  (format t "caplen : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 8 12)))
+  (format t "len : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 12 16))))
