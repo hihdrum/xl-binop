@@ -36,6 +36,11 @@
 	  (write-char (code-char (ldb (byte 8 0) x)))
 	  x)))
 
+(defun make-same-char (n c)
+  (with-output-to-string (os)
+	(dotimes (i n)
+	  (princ c os))))
+
 (defun hex-string (str)
   (let ((bin-str (convert-encoding-to-internal *encoding-binary* str)))
 	(format nil "~{~2,'0x~^ ~}" (map 'list #'char-code bin-str))))
@@ -68,9 +73,11 @@
 	  (if (eq c :eof)
 		  (progn
 			(unless (eq 0 counter)
-			  (format t "~8,'0X: ~{~2,'0X~^ ~} : ~A~%"
-					  (* line-counter 16) (map 'list #'char-code v) (map 'string #'display-char v)))
-			(return)))
+			  (let ((addnum (- 16 counter)))
+				(format t "~8,'0X: ~{~2,'0X~^ ~}" (* line-counter 16) (map 'list #'char-code v))
+				(format t "~A" (make-same-char (* 3 addnum) #\SPC))
+				(format t " : ~A~%" (map 'string #'display-char v)))
+			  (return))))
 	  (incf counter)
 	  (vector-push c v)
 	  (if (= 16 counter)
