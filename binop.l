@@ -25,44 +25,16 @@
 			(return result)
 		  (vector-push c result))))))
 
-(defun write-short-int (x &key (little t))
-  (if little
-	  (progn
-		(write-char (code-char (ldb (byte 8 0) x)))
-		(write-char (code-char (ldb (byte 8 8) x)))
-		x)
-	(progn
-	  (write-char (code-char (ldb (byte 8 8) x)))
-	  (write-char (code-char (ldb (byte 8 0) x)))
-	  x)))
+(defun hex-dump (in-str &optional (force-binary nil))
+  (let ((str (if force-binary
+				 (convert-encoding-to-internal *encoding-binary* in-str)
+			   in-str)))
+	(format nil "~{~2,'0x~^ ~}" (map 'list #'char-code str))))
 
-(defun make-same-char (n c)
-  (with-output-to-string (os)
-	(dotimes (i n)
-	  (princ c os))))
-
-(defun hex-string (str)
-  (let ((bin-str (convert-encoding-to-internal *encoding-binary* str)))
-	(format nil "~{~2,'0x~^ ~}" (map 'list #'char-code bin-str))))
-
-(defun hex-dump (stream)
-  (let ((bin-str (convert-encoding-to-internal *encoding-binary* stream)))
-	(hex-string bin-str)))
-
-(defun %print-hex-dump (n stream)
-  (let (c (counter 0))
-	(loop
-	  (setq c (read-char stream nil :eof))
-	  (if (eq c :eof)
-		  (return))
-	  (incf counter)
-	  (princ (format nil "~2,'0x" (char-code c)))
-	  (if (= n counter)
-		  (progn
-			(princ #\newline)
-			(setq counter 0))
-		(progn
-		  (princ #\SPC))))))
+(defun display-char (c &optional (sub-c #\.))
+  (if (graphic-char-p c)
+	  c
+	sub-c))
 
 (defun print-hex-dump (str)
   (let (c (counter 0) (v (make-vector 16 :element-type 'character :fill-pointer 0))
@@ -73,25 +45,32 @@
 	  (if (eq c :eof)
 		  (progn
 			(unless (eq 0 counter)
-			  (let ((addnum (- 16 counter)))
-				(format t "~8,'0X: ~{~2,'0X~^ ~}" (* line-counter 16) (map 'list #'char-code v))
-				(format t "~A" (make-same-char (* 3 addnum) #\SPC))
-				(format t " : ~A~%" (map 'string #'display-char v)))
-			  (return))))
+			  (let* ((address-number (* line-counter 16))
+					 (addnum (- 16 counter))
+					 (space-str (make-vector (* 3 addnum) :element-type 'character :initial-element #\SPC))
+					 (display-str (map 'string #'display-char v)))
+				(format t "~8,'0X: ~A~A : ~A~%" address-number (hex-dump v) space-str display-str)))
+			(return)))
 	  (incf counter)
 	  (vector-push c v)
 	  (if (= 16 counter)
 		  (progn
-			(format t "~8,'0X: ~{~2,'0X~^ ~} : ~A~%"
-					(* line-counter 16) (map 'list #'char-code v) (map 'string #'display-char v))
+			(format t "~8,'0X: ~A : ~A~%"
+					(* line-counter 16) (hex-dump v) (map 'string #'display-char v))
 			(setq counter 0)
 			(incf line-counter)
 			(setq v (make-vector 16 :element-type 'character :fill-pointer 0)))))))
 
-(defun display-char (c &optional (sub-c #\.))
-  (if (graphic-char-p c)
-	  c
-	sub-c))
+(defun write-short-int (x &key (little t))
+  (if little
+	  (progn
+		(write-char (code-char (ldb (byte 8 0) x)))
+		(write-char (code-char (ldb (byte 8 8) x)))
+		x)
+	(progn
+	  (write-char (code-char (ldb (byte 8 8) x)))
+	  (write-char (code-char (ldb (byte 8 0) x)))
+	  x)))
 
 (defun 4-binary-string-to-integer (bin-str)
   (let ((v (map 'vector #'char-code bin-str)))
