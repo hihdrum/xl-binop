@@ -61,7 +61,6 @@
 			(incf line-counter)
 			(setf (fill-pointer v) 0))))))
 
-
 (defun write-short-int (x &key (little t))
   (if little
 	  (progn
@@ -73,17 +72,43 @@
 	  (write-char (code-char (ldb (byte 8 0) x)))
 	  x)))
 
-(defun 4-binary-string-to-integer (bin-str)
-  (let ((v (map 'vector #'char-code bin-str)))
-	(+ (svref v 0)
-	   (ash (svref v 1) 8)
-	   (ash (svref v 2) 16)
-	   (ash (svref v 3) 24))))
+(defun byte-string-to-integer (byte-str)
+  (let ((result 0)
+		(byte-vector (map 'vector #'char-code byte-str)))
+	(dotimes (i (length byte-str) result)
+	  (setq result (+ result (ash (svref byte-vector i) (* 8 i)))))))
+
+;--------------------------------------------------------------------------------
+; pcap header
+;--------------------------------------------------------------------------------
+(defun pcap-tcpdump-magic (pcap)
+  (substring pcap 0 4))
+
+(defun pcap-major-version (pcap)
+  (substring pcap 4 6))
+
+(defun pcap-minor-version (pcap)
+  (substring pcap 6 8))
+
+(defun pcap-time-zone (pcap)
+  (substring pcap 8 12))
+
+(defun pcap-sigfigs (pcap)
+  (substring pcap 12 16))
+
+(defun pcap-scaplen (pcap)
+  (substring pcap 16 20))
+
+(defun pcap-link-type (pcap)
+  (substring pcap 20 24))
+
+(defun read-pcap-header-raw (&optional in)
+  (read-n-char 24 in))
 
 (defstruct pcap-header
   tcpdump-magic major-version minor-version time-zone sigfigs scaplen link-type)
 
-(defun read-pcap-header-raw (&optional in)
+(defun %read-pcap-header-raw (&optional in)
   (make-pcap-header
    :tcpdump-magic (read-n-char 4 in)
    :major-version (read-n-char 2 in)
@@ -104,28 +129,61 @@
 	(print-help "scaplen" (pcap-header-scaplen ph))
 	(print-help "link-type" (pcap-header-link-type ph))))
 
+;--------------------------------------------------------------------------------
+; packet header
+;--------------------------------------------------------------------------------
+(defun packet-time-stamp (paket-header)
+  (substring packet-header 0 8))
+
+(defun packet-caplen (packet-header)
+  (substring packet-header 8 12))
+
+(defun packet-len (packet-header)
+  (substring packet-header 12 16))
+
+(defun read-packet-header-raw (&optional in)
+  (read-n-char 16 in))
+
 (defstruct packet-header
   time-stamp caplen len)
 
-(defun read-packet-header-raw (&optional in)
+(defun %read-packet-header-raw (&optional in)
   (make-packet-header
    :time-stamp (read-n-char 8 in)
    :caplen (read-n-char 4 in)
    :len (read-n-char 4 in)))
 
-(defun print-packet-header-raw (ph)
+(defun %print-packet-header-raw (ph)
   (flet ((print-help (name data)
 		   (format t "~20@A : ~{~2,'0X~^ ~}~%" name (map 'list #'char-code data))))
 	(print-help "time-stamp" (packet-header-time-stamp ph))
 	(print-help "caplen" (packet-header-caplen ph))
 	(print-help "len" (packet-header-len ph))))
 
+;--------------------------------------------------------------------------------
+; ethernet2
+;--------------------------------------------------------------------------------
+(defun ethernet2-destination (eth)
+  (substring eth 0 6))
+
+(defun ethernet2-source (eth)
+  (substring eth 6 12))
+
+(defun ethernet2-type (eth)
+  (substring eth 12 16))
+
+(defun read-ethernet2-raw (&optional in)
+  (read-n-char 16 in))
+
+(defun mac-address-string (mac-str)
+  (format nil "~{~2,'0X~^:~}" (map 'list #'char-code mac-str)))
+
 (defstruct ethernet2
   destination
   source
   type)
 
-(defun read-ethernet2-raw (&optional in)
+(defun %read-ethernet2-raw (&optional in)
   (make-ethernet2
    :destination (read-n-char 6 in)
    :source (read-n-char 6 in)
@@ -137,6 +195,18 @@
 	(print-help "destination" (ethernet2-destination eth2))
 	(print-help "caplen" (ethernet2-source eth2))
 	(print-help "len" (ethernet2-type eth2))))
+
+;--------------------------------------------------------------------------------
+; IP
+;--------------------------------------------------------------------------------
+(defun ip-version (ip)
+  (ash (char-code (svref ip 0)) -4))
+
+(defun ip-header-length (ip)
+  (logand #x0f (char-code (svref ip 0))))
+
+(defun read-ip-header-raw (&optional in)
+  (read-n-char 24 in))
 
 (defstruct ip-header
   version-ihl
@@ -151,7 +221,7 @@
   destination-ip-address
   optons-padding)
 
-(defun read-ip-header-raw (&optional in)
+(defun %read-ip-header-raw (&optional in)
   (make-ip-header
    :version-ihl (read-n-char 1 in)
    :type-of-service (read-n-char 1 in)
@@ -192,7 +262,7 @@
 
 (defun proc-one-record (&optional in)
   (let* ((packet-header (read-packet-header-raw in))
-		 (len (4-binary-string-to-integer (packet-header-len packet-header)))
+		 (len (byte-string-to-integer (packet-header-len packet-header)))
 		 (raw-packet (read-n-char len in)))
 	(print-packet-header-raw packet-header)
 	(print-hex-dump raw-packet)))
