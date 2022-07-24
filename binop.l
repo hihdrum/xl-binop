@@ -126,16 +126,90 @@
 	  (setq result (concat result (read-n-char (- (4-binary-string-to-integer size-str) 8)))))
 	result))
 
-(defun print-pcap-header (bin-str)
-  (format t "tcpdump magic : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 0 4)))
-  (format t "major version : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 4 6)))
-  (format t "major version : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 6 8)))
-  (format t "time zone : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 8 12)))
-  (format t "sigfigs : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 12 16)))
-  (format t "scaplen : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 16 20)))
-  (format t "link type : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 20 24))))
+(defstruct pcap-header
+  tcpdump-magic major-version minor-version time-zone sigfigs scaplen link-type)
 
-(defun print-packet-header (bin-str)
-  (format t "Time Stamp : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 0 8)))
-  (format t "caplen : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 8 12)))
-  (format t "len : ~{~2,'0X~^ ~}~%" (map 'list #'char-code (substring bin-str 12 16))))
+(defun read-pcap-header-raw (&optional in)
+  (make-pcap-header
+   :tcpdump-magic (read-n-char 4 in)
+   :major-version (read-n-char 2 in)
+   :minor-version (read-n-char 2 in)
+   :time-zone (read-n-char 4 in)
+   :sigfigs (read-n-char 4 in)
+   :scaplen (read-n-char 4 in)
+   :link-type (read-n-char 4 in)))
+
+(defun print-pcap-header-raw (ph)
+  (flet ((print-help (name data)
+		   (format t "~20@A : ~{~2,'0X~^ ~}~%" name (map 'list #'char-code data))))
+	(print-help "tcpdump-magic" (pcap-header-tcpdump-magic ph))
+	(print-help "major-version" (pcap-header-major-version ph))
+	(print-help "minor-version" (pcap-header-minor-version ph))
+	(print-help "time-zone" (pcap-header-time-zone ph))
+	(print-help "sigfigs" (pcap-header-sigfigs ph))
+	(print-help "scaplen" (pcap-header-scaplen ph))
+	(print-help "link-type" (pcap-header-link-type ph))))
+
+(defstruct packet-header
+  time-stamp caplen len)
+
+(defun read-packet-header-raw (&optional in)
+  (make-packet-header
+   :time-stamp (read-n-char 8 in)
+   :caplen (read-n-char 4 in)
+   :len (read-n-char 4 in)))
+
+(defun print-packet-header-raw (ph)
+  (flet ((print-help (name data)
+		   (format t "~20@A : ~{~2,'0X~^ ~}~%" name (map 'list #'char-code data))))
+	(print-help "time-stamp" (packet-header-time-stamp ph))
+	(print-help "caplen" (packet-header-caplen ph))
+	(print-help "len" (packet-header-len ph))))
+
+(defstruct ethernet2
+  destination
+  source
+  type)
+
+(defun read-ethernet2-raw (&optional in)
+  (make-ethernet2
+   :destination (read-n-char 6 in)
+   :source (read-n-char 6 in)
+   :type (read-n-char 2 in)))
+
+(defun print-ethernet2-raw (eth2)
+  (flet ((print-help (name data)
+		   (format t "~20@A : ~{~2,'0X~^ ~}~%" name (map 'list #'char-code data))))
+	(print-help "destination" (ethernet2-destination eth2))
+	(print-help "caplen" (ethernet2-source eth2))
+	(print-help "len" (ethernet2-type eth2))))
+
+
+(defparameter pcap-header-info
+  '((tcpdump-magic . 4)
+	(major-version . 2)
+	(minor-version . 2)
+	(time-zone . 4)
+	(sigfigs . 4)
+	(scaplen . 4)
+	(link-type . 4)))
+
+(defun printer-help (as)
+  `(format t "~20@A : ~{~2,'0X~^ ~}~%" ,(symbol-name (car as)) (map 'list #'char-code (read-n-char ,(cdr as)))))
+
+#|
+(defmacro def-printer (name slist)
+  `(defun (concat "print-" (symbol-name ',name)) (bin-str)
+	 (with-input-from-string (*standard-input* bin-str)
+	   (printer-help (car ,slist)))))
+
+
+(defmacro def-printer (name slist)
+  `(defun (concat "print-" ,name)
+	 (with-input-from-string (*standard-input* bin-str)
+	   ,@(mapcar #'printer-help ',slist)))))
+
+
+(defstruct pcap-header
+  tcpdump-magic major-version minor-version time-zone sigfigs scaplen link-type)
+|#
