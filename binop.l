@@ -36,8 +36,8 @@
 	  c
 	sub-c))
 
-(defun print-hex-dump (str)
-  (let (c (counter 0) (v (make-vector 16 :element-type 'character :fill-pointer 0))
+(defun print-hex-dump (str &optional (num 16))
+  (let (c (counter 0) (v (make-vector num :element-type 'character :fill-pointer 0))
 		  (line-counter 0)
 		  (s (make-string-input-stream str)))
 	(loop
@@ -45,21 +45,21 @@
 	  (if (eq c :eof)
 		  (progn
 			(unless (eq 0 counter)
-			  (let* ((address-number (* line-counter 16))
-					 (addnum (- 16 counter))
+			  (let* ((address-number (* line-counter num))
+					 (addnum (- num counter))
 					 (space-str (make-vector (* 3 addnum) :element-type 'character :initial-element #\SPC))
 					 (display-str (map 'string #'display-char v)))
 				(format t "~8,'0X: ~A~A : ~A~%" address-number (hex-dump v) space-str display-str)))
 			(return)))
 	  (incf counter)
 	  (vector-push c v)
-	  (if (= 16 counter)
+	  (if (= num counter)
 		  (progn
 			(format t "~8,'0X: ~A : ~A~%"
-					(* line-counter 16) (hex-dump v) (map 'string #'display-char v))
+					(* line-counter num) (hex-dump v) (map 'string #'display-char v))
 			(setq counter 0)
 			(incf line-counter)
-			(setq v (make-vector 16 :element-type 'character :fill-pointer 0)))))))
+			(setq v (make-vector num :element-type 'character :fill-pointer 0)))))))
 
 (defun write-short-int (x &key (little t))
   (if little
