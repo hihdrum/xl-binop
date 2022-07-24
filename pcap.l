@@ -1,14 +1,20 @@
 ;--------------------------------------------------------------------------------
 ; pcap header
 ;--------------------------------------------------------------------------------
-(defun pcap-tcpdump-magic (pcap)
+(defun pcap-tcpdump-magic-raw (pcap)
   (substring pcap 0 4))
 
-(defun pcap-major-version (pcap)
+(defun pcap-major-version-raw (pcap)
   (substring pcap 4 6))
 
-(defun pcap-minor-version (pcap)
+(defun pcap-major-version (pcap)
+  (byte-string-to-integer (pcap-major-version-raw pcap)))
+
+(defun pcap-minor-version-raw (pcap)
   (substring pcap 6 8))
+
+(defun pcap-minor-version (pcap)
+  (byte-string-to-integer (pcap-minor-version-raw pcap)))
 
 (defun pcap-time-zone (pcap)
   (substring pcap 8 12))
@@ -52,14 +58,27 @@
 ;--------------------------------------------------------------------------------
 ; packet header
 ;--------------------------------------------------------------------------------
-(defun packet-time-stamp (paket-header)
+(defun packet-time-stamp-raw (paket-header)
   (substring packet-header 0 8))
 
-(defun packet-caplen (packet-header)
+(defun packet-time-stamp-second (packet-header)
+  (byte-string-to-integer (substring (packet-time-stamp-raw packet-header) 0 4)))
+
+(defun packet-time-stamp-decimal-point (packet-header)
+  (read-from-string
+   (format nil "0.~D" (byte-string-to-integer (substring (packet-time-stamp-raw packet-header) 4 8)))))
+
+(defun packet-caplen-raw (packet-header)
   (substring packet-header 8 12))
 
-(defun packet-len (packet-header)
+(defun packet-caplen (packet-header)
+  (byte-string-to-integer (packet-caplen-raw packet-header)))
+
+(defun packet-len-raw (packet-header)
   (substring packet-header 12 16))
+
+(defun packet-len (packet-header)
+  (byte-string-to-integer (packet-len-raw packet-header)))
 
 (defun read-packet-header-raw (&optional in)
   (read-n-char 16 in))
