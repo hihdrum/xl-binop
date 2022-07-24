@@ -184,6 +184,45 @@
 	(print-help "caplen" (ethernet2-source eth2))
 	(print-help "len" (ethernet2-type eth2))))
 
+(defstruct ip-header
+  version-ihl
+  type-of-service
+  total-length
+  identification
+  flags-fragment-offset
+  time-to-live
+  protocol
+  header-checksum
+  souce-ip-address
+  destination-ip-address
+  optons-padding)
+
+(defun read-ip-header-raw (&optional in)
+  (make-ip-header
+   :version-ihl (read-n-char 1 in)
+   :type-of-service (read-n-char 1 in)
+   :total-length (read-n-char 2 in)
+   :identification (read-n-char 2 in)
+   :flags-fragment-offset (read-n-char 2 in)
+   :time-to-live (read-n-char 1 in)
+   :protocol (read-n-char 1 in)
+   :header-checksum (read-n-char 2 in)
+   :souce-ip-address (read-n-char 4 in)
+   :destination-ip-address (read-n-char 4 in)))
+
+(defun print-ip-header-raw (iph)
+  (flet ((print-help (name data)
+		   (format t "~20@A : ~{~2,'0X~^ ~}~%" name (map 'list #'char-code data))))
+	(print-help "version-ihl" (ip-header-version-ihl iph))
+	(print-help "type-of-service" (ip-header-type-of-service iph))
+	(print-help "total-length " (ip-header-total-length iph))
+	(print-help "identification " (ip-header-identification iph))
+	(print-help "flags-fragment-offset " (ip-header-flags-fragment-offset iph))
+	(print-help "time-to-live " (ip-header-time-to-live iph))
+	(print-help "protocol" (ip-header-protoclo iph))
+	(print-help "header-checksum" (ip-header-header-checksum iph))
+	(print-help "source-ip-address" (ip-header-source-ip-address iph))
+	(print-help "source-ip-address" (ip-header-destination-ip-address iph))))
 
 (defparameter pcap-header-info
   '((tcpdump-magic . 4)
