@@ -10,11 +10,11 @@
   `(with-open-binary-file (,stream ,filename :direction :output ,@options)
 	 ,@body))
 
-(defun make-string-to-binary-string (str)
+(defun make-binary-string-from-string (str)
   (convert-encoding-to-internal *encoding-binary* str))
 
-(defun make-string-binary-input-stream (str)
-  (let ((bin-str (make-string-to-binary-string str)))
+(defun make-binary-string-input-stream (str)
+  (let ((bin-str (make-binary-string-from-string str)))
 	(make-string-input-stream bin-str)))
 
 (defun read-n-char (times &optional in eof-error-p eof-value)
