@@ -59,7 +59,8 @@
 					(* line-counter num) (hex-dump v) (map 'string #'display-char v))
 			(setq counter 0)
 			(incf line-counter)
-			(setq v (make-vector num :element-type 'character :fill-pointer 0)))))))
+			(setf (fill-pointer v) 0))))))
+
 
 (defun write-short-int (x &key (little t))
   (if little
