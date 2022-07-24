@@ -25,16 +25,6 @@
 			(return result)
 		  (vector-push c result))))))
 
-(defun write-byte-list-log (bytes &optional (stream *standard-output*))
-  (format-date stream "%Y%m%d%H%M%S000")
-  (format stream "~10,'0D" (length bytes))
-  (dolist (b bytes)
-	(write-char (code-char b) stream)))
-
-(defun write-byte-list-to-file (bytes filepath)
-  (with-open-file (s filepath :direction :output :if-doex-not-exist :create :encoding :binary)
-	(write-byte-list-log bytes s)))
-
 (defun write-short-int (x &key (little t))
   (if little
 	  (progn
@@ -91,7 +81,6 @@
 			(incf line-counter)
 			(setq v (make-vector 16 :element-type 'character :fill-pointer 0)))))))
 
-
 (defun display-char (c &optional (sub-c #\.))
   (if (graphic-char-p c)
 	  c
@@ -103,28 +92,6 @@
 	   (ash (svref v 1) 8)
 	   (ash (svref v 2) 16)
 	   (ash (svref v 3) 24))))
-
-(defun section-header-block (&optional in)
-  (format t "Section Header Block~%")
-  (format t "Block Type : ~A~%" (hex-string (read-n-char 4 in)))
-  (format t "Block Txotal Length : ~A~%" (hex-string (read-n-char 4 in)))
-  (format t "Byte-Order-Magic : ~A~%" (hex-string (read-n-char 4 in)))
-  (format t "major version : ~A~%" (hex-string (read-n-char 2)))
-  (format t "minor version : ~A~%" (hex-string (read-n-char 2)))
-  (format t "Section Length : ~A~%" (hex-string (read-n-char 4 in)))
-  (format t "Block Total Length : ~A~%" (hex-string (read-n-char 4 in)))
-  )
-
-(defun little-endian-p (magic-str)
-  (string= (map 'string #'code-char #(#x4d #x3c #x2b #x1a)) magic-str))
-
-(defun read-section-header-block (&optional in)
-  (let (result)
-	(setq result (read-n-char 4 in))
-	(let ((size-str (read-n-char 4)))
-	  (setq result (concat result size-str))
-	  (setq result (concat result (read-n-char (- (4-binary-string-to-integer size-str) 8)))))
-	result))
 
 (defstruct pcap-header
   tcpdump-magic major-version minor-version time-zone sigfigs scaplen link-type)
@@ -193,7 +160,7 @@
   time-to-live
   protocol
   header-checksum
-  souce-ip-address
+  source-ip-address
   destination-ip-address
   optons-padding)
 
@@ -207,7 +174,7 @@
    :time-to-live (read-n-char 1 in)
    :protocol (read-n-char 1 in)
    :header-checksum (read-n-char 2 in)
-   :souce-ip-address (read-n-char 4 in)
+   :source-ip-address (read-n-char 4 in)
    :destination-ip-address (read-n-char 4 in)))
 
 (defun print-ip-header-raw (iph)
@@ -219,7 +186,7 @@
 	(print-help "identification " (ip-header-identification iph))
 	(print-help "flags-fragment-offset " (ip-header-flags-fragment-offset iph))
 	(print-help "time-to-live " (ip-header-time-to-live iph))
-	(print-help "protocol" (ip-header-protoclo iph))
+	(print-help "protocol" (ip-header-protocol iph))
 	(print-help "header-checksum" (ip-header-header-checksum iph))
 	(print-help "source-ip-address" (ip-header-source-ip-address iph))
 	(print-help "source-ip-address" (ip-header-destination-ip-address iph))))
@@ -235,6 +202,14 @@
 
 (defun printer-help (as)
   `(format t "~20@A : ~{~2,'0X~^ ~}~%" ,(symbol-name (car as)) (map 'list #'char-code (read-n-char ,(cdr as)))))
+
+(defun proc-one-record (&optional in)
+  (let* ((packet-header (read-packet-header-raw in))
+		 (len (4-binary-string-to-integer (packet-header-len packet-header)))
+		 (raw-packet (read-n-char len in)))
+	(print-packet-header-raw packet-header)
+	(print-hex-dump raw-packet)))
+
 
 #|
 (defmacro def-printer (name slist)
