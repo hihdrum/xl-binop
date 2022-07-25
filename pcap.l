@@ -75,8 +75,24 @@
 ;--------------------------------------------------------------------------------
 ; packet header
 ;--------------------------------------------------------------------------------
+(defun read-packet-header-raw (&optional in)
+  (read-n-char 16 in))
+
 (defun packet-time-stamp-raw (paket-header)
   (substring packet-header 0 8))
+
+(defun packet-caplen-raw (packet-header)
+  (substring packet-header 8 12))
+
+(defun packet-len-raw (packet-header)
+  (substring packet-header 12 16))
+
+(defun print-packet-header-raw (packet-header)
+  (flet ((print-help (name data)
+		   (format "~20@A : ~A~%" name data)))
+	(print-help "time-stamp" (hex-dump (packet-time-stamp-raw packet-header)))
+	(print-help "caplen" (hex-dump (packet-caplen-raw packet-header)))
+	(print-help "len" (hex-dump (packet-len-raw packet-header)))))
 
 (defun packet-time-stamp-second (packet-header)
   (byte-string-to-integer (substring (packet-time-stamp-raw packet-header) 0 4)))
@@ -85,20 +101,13 @@
   (read-from-string
    (format nil "0.~D" (byte-string-to-integer (substring (packet-time-stamp-raw packet-header) 4 8)))))
 
-(defun packet-caplen-raw (packet-header)
-  (substring packet-header 8 12))
-
 (defun packet-caplen (packet-header)
   (byte-string-to-integer (packet-caplen-raw packet-header)))
-
-(defun packet-len-raw (packet-header)
-  (substring packet-header 12 16))
 
 (defun packet-len (packet-header)
   (byte-string-to-integer (packet-len-raw packet-header)))
 
-(defun read-packet-header-raw (&optional in)
-  (read-n-char 16 in))
+
 
 (defstruct packet-header
   time-stamp caplen len)
