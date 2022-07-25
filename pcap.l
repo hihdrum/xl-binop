@@ -1,57 +1,74 @@
 ;--------------------------------------------------------------------------------
 ; pcap header
 ;--------------------------------------------------------------------------------
+(defun read-pcap-header-raw (&optional in)
+  (read-n-char 24 in))
+
 (defun pcap-tcpdump-magic-raw (pcap)
   (substring pcap 0 4))
 
 (defun pcap-major-version-raw (pcap)
   (substring pcap 4 6))
 
-(defun pcap-major-version (pcap)
-  (byte-string-to-integer (pcap-major-version-raw pcap)))
-
 (defun pcap-minor-version-raw (pcap)
   (substring pcap 6 8))
+
+(defun pcap-time-zone-raw (pcap)
+  (substring pcap 8 12))
+
+(defun pcap-sigfigs-raw (pcap)
+  (substring pcap 12 16))
+
+(defun pcap-scaplen-raw (pcap)
+  (substring pcap 16 20))
+
+(defun pcap-link-type-raw (pcap)
+  (substring pcap 20 24))
+
+(defun print-pcap-header-raw (pcap-raw)
+  (flet ((print-help (name data)
+		   (format "~20@A : ~A~%" name data)))
+	(print-help "tcpdump-magic" (hex-dump (pcap-tcpdump-magic-raw pcap-raw)))
+	(print-help "major-version" (hex-dump (pcap-major-version-raw pcap-raw)))
+	(print-help "minor-version" (hex-dump (pcap-minor-version-raw pcap-raw)))
+	(print-help "time-zone" (hex-dump (pcap-time-zone-raw pcap-raw)))
+	(print-help "sigfigs" (hex-dump (pcap-sigfigs-raw pcap-raw)))
+	(print-help "scaplen" (hex-dump (pcap-scaplen-raw pcap-raw)))
+	(print-help "link-type" (hex-dump (pcap-link-type-raw pcap-raw)))))
+
+(defun pcap-major-version (pcap)
+  (byte-string-to-integer (pcap-major-version-raw pcap)))
 
 (defun pcap-minor-version (pcap)
   (byte-string-to-integer (pcap-minor-version-raw pcap)))
 
-(defun pcap-time-zone (pcap)
-  (substring pcap 8 12))
-
-(defun pcap-sigfigs (pcap)
-  (substring pcap 12 16))
-
-(defun pcap-scaplen (pcap)
-  (substring pcap 16 20))
-
-(defun pcap-link-type (pcap)
-  (substring pcap 20 24))
-
-(defun read-pcap-header-raw (&optional in)
-  (read-n-char 24 in))
-
 (defstruct pcap-header
-  tcpdump-magic major-version minor-version time-zone sigfigs scaplen link-type)
+  tcpdump-magic
+  major-version
+  minor-version
+  time-zone
+  sigfigs
+  scaplen
+  link-type)
 
-(defun %read-pcap-header-raw (&optional in)
+(defun read-pcap-header (&optional in)
   (make-pcap-header
-   :tcpdump-magic (read-n-char 4 in)
-   :major-version (read-n-char 2 in)
-   :minor-version (read-n-char 2 in)
+   :tcpdump-magic (map 'vector #'char-code (read-n-char 4 in))
+   :major-version (byte-string-to-integer (read-n-char 2 in))
+   :minor-version (byte-string-to-integer (read-n-char 2 in))
    :time-zone (read-n-char 4 in)
    :sigfigs (read-n-char 4 in)
-   :scaplen (read-n-char 4 in)
-   :link-type (read-n-char 4 in)))
+   :scaplen (byte-string-to-integer (read-n-char 4 in))
+   :link-type (byte-string-to-integer (read-n-char 4 in))))
 
-(defun print-pcap-header-raw (ph)
+(defun print-pcap-header (ph)
   (flet ((print-help (name data)
-		   (format t "~20@A : ~{~2,'0X~^ ~}~%" name (map 'list #'char-code data))))
+		   (format t "~20@A : ~A~%" name data)))
 	(print-help "tcpdump-magic" (pcap-header-tcpdump-magic ph))
 	(print-help "major-version" (pcap-header-major-version ph))
 	(print-help "minor-version" (pcap-header-minor-version ph))
-	(print-help "time-zone" (pcap-header-time-zone ph))
-	(print-help "sigfigs" (pcap-header-sigfigs ph))
+;	(print-help "time-zone" (pcap-header-time-zone ph))
+;	(print-help "sigfigs" (pcap-header-sigfigs ph))
 	(print-help "scaplen" (pcap-header-scaplen ph))
 	(print-help "link-type" (pcap-header-link-type ph))))
 
