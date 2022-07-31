@@ -5,29 +5,29 @@
   (read-n-char 24 in))
 
 (defun pcap-tcpdump-magic-raw (pcap)
-  (substring pcap 0 4))
+  (make-vector 4 :element-type 'character :displaced-to pcap))
 
 (defun pcap-major-version-raw (pcap)
-  (substring pcap 4 6))
+  (make-vector 2 :element-type 'character :displaced-to pcap :displaced-index-offset 4))
 
 (defun pcap-minor-version-raw (pcap)
-  (substring pcap 6 8))
+  (make-vector 2 :element-type 'character :displaced-to pcap :displaced-index-offset 6))
 
 (defun pcap-time-zone-raw (pcap)
-  (substring pcap 8 12))
+  (make-vector 4 :element-type 'character :displaced-to pcap :displaced-index-offset 8))
 
 (defun pcap-sigfigs-raw (pcap)
-  (substring pcap 12 16))
+  (make-vector 4 :element-type 'character :displaced-to pcap :displaced-index-offset 12))
 
 (defun pcap-scaplen-raw (pcap)
-  (substring pcap 16 20))
+  (make-vector 4 :element-type 'character :displaced-to pcap :displaced-index-offset 16))
 
 (defun pcap-link-type-raw (pcap)
-  (substring pcap 20 24))
+  (make-vector 4 :element-type 'character :displaced-to pcap :displaced-index-offset 20))
 
 (defun print-pcap-header-raw (pcap-raw)
   (flet ((print-help (name data)
-		   (format "~20@A : ~A~%" name data)))
+		   (format t "~20@A : ~A~%" name data)))
 	(print-help "tcpdump-magic" (hex-dump (pcap-tcpdump-magic-raw pcap-raw)))
 	(print-help "major-version" (hex-dump (pcap-major-version-raw pcap-raw)))
 	(print-help "minor-version" (hex-dump (pcap-minor-version-raw pcap-raw)))
@@ -78,18 +78,18 @@
 (defun read-packet-header-raw (&optional in)
   (read-n-char 16 in))
 
-(defun packet-time-stamp-raw (paket-header)
-  (substring packet-header 0 8))
+(defun packet-time-stamp-raw (packet-header)
+  (make-vector 8 :element-type 'character :displaced-to packet-header))
 
 (defun packet-caplen-raw (packet-header)
-  (substring packet-header 8 12))
+  (make-vector 4 :element-type 'character :displaced-to packet-header :displaced-index-offset 8))
 
 (defun packet-len-raw (packet-header)
-  (substring packet-header 12 16))
+  (make-vector 4 :element-type 'character :dxcisplaced-to packet-header :displaced-index-offset 12))
 
 (defun print-packet-header-raw (packet-header)
   (flet ((print-help (name data)
-		   (format "~20@A : ~A~%" name data)))
+		   (format t "~20@A : ~A~%" name data)))
 	(print-help "time-stamp" (hex-dump (packet-time-stamp-raw packet-header)))
 	(print-help "caplen" (hex-dump (packet-caplen-raw packet-header)))
 	(print-help "len" (hex-dump (packet-len-raw packet-header)))))
