@@ -5,25 +5,25 @@
   (read-n-char 24 in))
 
 (defun pcap-tcpdump-magic-raw (pcap)
-  (make-vector 4 :element-type 'character :displaced-to pcap))
+  (slice pcap 0 4))
 
 (defun pcap-major-version-raw (pcap)
-  (make-vector 2 :element-type 'character :displaced-to pcap :displaced-index-offset 4))
+  (slice pcap 4 2))
 
 (defun pcap-minor-version-raw (pcap)
-  (make-vector 2 :element-type 'character :displaced-to pcap :displaced-index-offset 6))
+  (slice pcap 6 2))
 
 (defun pcap-time-zone-raw (pcap)
-  (make-vector 4 :element-type 'character :displaced-to pcap :displaced-index-offset 8))
+  (slice pcap 8 4))
 
 (defun pcap-sigfigs-raw (pcap)
-  (make-vector 4 :element-type 'character :displaced-to pcap :displaced-index-offset 12))
+  (slice pcap 12 4))
 
 (defun pcap-scaplen-raw (pcap)
-  (make-vector 4 :element-type 'character :displaced-to pcap :displaced-index-offset 16))
+  (slice pcap 16 4))
 
 (defun pcap-link-type-raw (pcap)
-  (make-vector 4 :element-type 'character :displaced-to pcap :displaced-index-offset 20))
+  (slice pcap 20 4))
 
 (defun print-pcap-header-raw (pcap-raw)
   (flet ((print-help (name data)
@@ -79,13 +79,13 @@
   (read-n-char 16 in))
 
 (defun packet-time-stamp-raw (packet-header)
-  (make-vector 8 :element-type 'character :displaced-to packet-header))
+  (slice packet-header 0 8))
 
 (defun packet-caplen-raw (packet-header)
-  (make-vector 4 :element-type 'character :displaced-to packet-header :displaced-index-offset 8))
+  (slice packet-header 8 4))
 
 (defun packet-len-raw (packet-header)
-  (make-vector 4 :element-type 'character :dxcisplaced-to packet-header :displaced-index-offset 12))
+  (slice packet-header 12 4))
 
 (defun print-packet-header-raw (packet-header)
   (flet ((print-help (name data)
@@ -95,19 +95,17 @@
 	(print-help "len" (hex-dump (packet-len-raw packet-header)))))
 
 (defun packet-time-stamp-second (packet-header)
-  (byte-string-to-integer (substring (packet-time-stamp-raw packet-header) 0 4)))
+  (byte-string-to-integer (slice (packet-time-stamp-raw packet-header) 0 4)))
 
 (defun packet-time-stamp-decimal-point (packet-header)
   (read-from-string
-   (format nil "0.~D" (byte-string-to-integer (substring (packet-time-stamp-raw packet-header) 4 8)))))
+   (format nil "0.~D" (byte-string-to-integer (slice (packet-time-stamp-raw packet-header) 4 4)))))
 
 (defun packet-caplen (packet-header)
   (byte-string-to-integer (packet-caplen-raw packet-header)))
 
 (defun packet-len (packet-header)
   (byte-string-to-integer (packet-len-raw packet-header)))
-
-
 
 (defstruct packet-header
   time-stamp caplen len)
@@ -128,17 +126,24 @@
 ;--------------------------------------------------------------------------------
 ; ethernet2
 ;--------------------------------------------------------------------------------
-(defun ethernet2-destination (eth)
-  (substring eth 0 6))
-
-(defun ethernet2-source (eth)
-  (substring eth 6 12))
-
-(defun ethernet2-type (eth)
-  (substring eth 12 16))
-
 (defun read-ethernet2-raw (&optional in)
   (read-n-char 16 in))
+
+(defun ethernet2-destination-raw (eth)
+  (slice eth 0 6))
+
+(defun ethernet2-source-raw (eth)
+  (slice eth 6 6))
+
+(defun ethernet2-type-raw (eth)
+  (slice eth 12 2))
+
+(defun print-ethernet2-raw (eth2)
+  (flet ((print-help (name data)
+		   (format t "~20@A : ~A~%" name data)))
+	(print-help "destination" (hex-dump (ethernet2-destination-raw eth2)))
+	(print-help "caplen" (hex-dump (ethernet2-source eth2)))
+	(print-help "len" (hex-dump (ethernet2-type eth2)))))
 
 (defun mac-address-string (mac-str)
   (format nil "~{~2,'0X~^:~}" (map 'list #'char-code mac-str)))
@@ -154,12 +159,6 @@
    :source (read-n-char 6 in)
    :type (read-n-char 2 in)))
 
-(defun print-ethernet2-raw (eth2)
-  (flet ((print-help (name data)
-		   (format t "~20@A : ~{~2,'0X~^ ~}~%" name (map 'list #'char-code data))))
-	(print-help "destination" (ethernet2-destination eth2))
-	(print-help "caplen" (ethernet2-source eth2))
-	(print-help "len" (ethernet2-type eth2))))
 
 ;--------------------------------------------------------------------------------
 ; IP
