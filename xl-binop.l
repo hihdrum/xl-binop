@@ -25,6 +25,9 @@
 			(return result)
 		  (vector-push c result))))))
 
+(defun slice (vec start size)
+  (make-vector size :element-type 'character :displaced-to vec :displaced-index-offset start))
+
 (defun hex-dump (in-str &optional (force-binary nil))
   (let ((str (if force-binary
 				 (convert-encoding-to-internal *encoding-binary* in-str)
